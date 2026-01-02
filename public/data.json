@@ -1,0 +1,25 @@
+{
+  "users": [
+    {
+      "id": "usr_admin_001",
+      "name": "Merchant",
+      "email": "admin@example.com",
+      "role": "admin",
+      "avatar": "",
+      "balance": 0,
+      "joinedAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "usr_aff_001",
+      "name": "Affiliate",
+      "email": "affiliate@example.com",
+      "role": "affiliate",
+      "avatar": "",
+      "balance": 0,
+      "joinedAt": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "links": [],
+  "analytics": [],
+  "payouts": []
+}

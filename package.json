@@ -1,0 +1,32 @@
+{
+  "name": "d7fc0512-c521-46f6-85bb-7bc3298ed06d",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "daisyui": "^5.0.43",
+    "date-fns": "latest",
+    "framer-motion": "^12.23.16",
+    "lucide-react": "^0.525.0",
+    "mongodb": "^7.0.0",
+    "mongoose": "^9.1.1",
+    "next": "15.3.6",
+    "next-auth": "^4.24.13",
+    "nodemailer": "^7.0.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-is": "latest",
+    "recharts": "latest",
+    "stripe": "^20.1.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "tailwindcss": "^4"
+  }
+}
