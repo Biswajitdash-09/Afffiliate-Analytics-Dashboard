@@ -19,6 +19,9 @@ const Sidebar = () => {
     }
   }, [loading, data, currentUserId]);
 
+  /* Hook Initialization */
+  const pathname = usePathname();
+
   const isActive = (path) => pathname === path;
 
   const navItems = [

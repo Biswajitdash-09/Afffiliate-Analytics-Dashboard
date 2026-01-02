@@ -45,8 +45,8 @@ export default function AuthPage() {
         });
 
         if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || "Registration failed");
+          const data = await res.json();
+          throw new Error(data.message || "Registration failed");
         }
 
         // Auto-login after registration
