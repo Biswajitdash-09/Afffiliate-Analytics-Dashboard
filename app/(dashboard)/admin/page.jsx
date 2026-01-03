@@ -270,6 +270,10 @@ export default function AdminDashboardPage() {
                             <Icon name="Link" size={18} />
                             View All Links
                         </a>
+                        <a href="/admin/fraud" className="btn btn-outline gap-2 text-error hover:text-white">
+                            <Icon name="ShieldAlert" size={18} />
+                            Fraud Detection
+                        </a>
                         <a href="/payments" className="btn btn-outline gap-2">
                             <Icon name="CreditCard" size={18} />
                             Process Payouts
