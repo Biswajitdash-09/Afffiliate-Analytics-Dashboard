@@ -4,17 +4,20 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import Icon from "@/components/Icon";
 import LinkTable from "@/components/ui/LinkTable";
-import { format } from "date-fns";
+import FunnelChart from "@/components/ui/FunnelChart";
+import PerformanceBreakdown from "@/components/ui/PerformanceBreakdown";
 
 export default function ReportsPage() {
   const { currentUser, isAuthenticated, isLoading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState("daily"); // 'daily' or 'campaigns'
+  const [activeTab, setActiveTab] = useState("overview"); // 'overview', 'daily', 'campaigns'
   const [dateRange, setDateRange] = useState("30d");
 
   const [analyticsData, setAnalyticsData] = useState(null);
+  const [funnelData, setFunnelData] = useState(null);
   const [linksData, setLinksData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -23,18 +26,21 @@ export default function ReportsPage() {
       setError(null);
 
       try {
-        const [analyticsRes, linksRes] = await Promise.all([
+        const [analyticsRes, linksRes, funnelRes] = await Promise.all([
           fetch(`/api/analytics?range=${dateRange}`),
-          fetch('/api/links') // Links are usually fetched all-time for management
+          fetch('/api/links'),
+          fetch(`/api/funnel?range=${dateRange}`)
         ]);
 
         if (!analyticsRes.ok || !linksRes.ok) throw new Error("Failed to fetch reports");
 
         const analytics = await analyticsRes.json();
         const links = await linksRes.json();
+        const funnel = funnelRes.ok ? await funnelRes.json() : null;
 
         setAnalyticsData(analytics);
         setLinksData(links);
+        setFunnelData(funnel);
 
       } catch (err) {
         console.error("Reports Error:", err);
@@ -48,7 +54,6 @@ export default function ReportsPage() {
       fetchData();
     }
   }, [dateRange, isAuthenticated, authLoading]);
-
 
   // Computed Summary from Analytics API
   const summary = analyticsData?.summary || { revenue: 0, clicks: 0, conversions: 0 };
@@ -76,7 +81,7 @@ export default function ReportsPage() {
       return str;
     };
 
-    if (activeTab === 'daily') {
+    if (activeTab === 'daily' || activeTab === 'overview') {
       headers = ["Date", "Clicks", "Conversions", "Revenue ($)"];
       rows = dailyStats.map(day => [
         day._id,
@@ -111,8 +116,45 @@ export default function ReportsPage() {
     document.body.removeChild(link);
   };
 
+  // PDF Export
+  const downloadPDF = async () => {
+    if (!analyticsData) return;
+    setExporting(true);
+
+    try {
+      // Dynamic import to avoid SSR issues
+      const { generatePDFReport } = await import('@/lib/pdfExport');
+
+      generatePDFReport({
+        summary,
+        dailyStats,
+        campaigns: funnelData?.campaignBreakdown || linksData.map(l => ({
+          name: l.name,
+          clicks: l.clicks,
+          conversions: l.conversions,
+          revenue: l.revenue,
+          conversionRate: l.clicks > 0 ? (l.conversions / l.clicks) * 100 : 0
+        })),
+        dateRange: dateRange === '7d' ? 'Last 7 Days' : dateRange === '30d' ? 'Last 30 Days' : 'Last 90 Days',
+        reportTitle: 'Affiliate Performance Report'
+      });
+    } catch (err) {
+      console.error("PDF Export Error:", err);
+      alert("Failed to generate PDF");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const formatCurrency = (val) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(val || 0);
   const formatNumber = (val) => new Intl.NumberFormat('en-US').format(val || 0);
+
+  const getDateRangeLabel = () => {
+    if (dateRange === '7d') return 'Last 7 Days';
+    if (dateRange === '30d') return 'Last 30 Days';
+    if (dateRange === '90d') return 'Last 90 Days';
+    return 'All Time';
+  };
 
   if (loading || authLoading) {
     return (
@@ -139,7 +181,7 @@ export default function ReportsPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-base-content">Performance Reports</h2>
-          <p className="text-base-content/60 text-sm">Detailed metrics for your campaigns.</p>
+          <p className="text-base-content/60 text-sm">Detailed metrics and analytics for your campaigns.</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <div className="join shadow-sm border border-base-300 rounded-lg">
@@ -149,14 +191,31 @@ export default function ReportsPage() {
                 onClick={() => setDateRange(range)}
                 className={`join-item btn btn-sm ${dateRange === range ? 'btn-active btn-primary' : 'bg-base-100'}`}
               >
-                {range === '7d' ? 'Last 7 Days' : range === '30d' ? 'Last 30 Days' : 'Last 90 Days'}
+                {range === '7d' ? '7D' : range === '30d' ? '30D' : '90D'}
               </button>
             ))}
           </div>
-          <button onClick={downloadCSV} className="btn btn-sm btn-outline gap-2">
-            <Icon name="Download" size={16} />
-            <span className="hidden sm:inline">Export CSV</span>
-          </button>
+          <div className="dropdown dropdown-end">
+            <label tabIndex={0} className="btn btn-sm btn-outline gap-2">
+              <Icon name="Download" size={16} />
+              Export
+              <Icon name="ChevronDown" size={14} />
+            </label>
+            <ul tabIndex={0} className="dropdown-content z-1 menu p-2 shadow-lg bg-base-100 rounded-box w-40 border border-base-200">
+              <li>
+                <button onClick={downloadCSV} className="gap-2">
+                  <Icon name="FileSpreadsheet" size={16} />
+                  CSV
+                </button>
+              </li>
+              <li>
+                <button onClick={downloadPDF} disabled={exporting} className="gap-2">
+                  <Icon name="FileText" size={16} />
+                  {exporting ? 'Generating...' : 'PDF'}
+                </button>
+              </li>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -191,16 +250,72 @@ export default function ReportsPage() {
       {/* Main Content Tabs */}
       <div className="flex flex-col gap-6">
         <div className="tabs tabs-boxed bg-base-100 border border-base-200 p-1 w-fit">
-          <a className={`tab gap-2 ${activeTab === 'daily' ? 'tab-active bg-primary text-primary-content' : ''}`} onClick={() => setActiveTab('daily')}>
-            <Icon name="Calendar" size={16} /> Daily Breakdown
+          <a
+            className={`tab gap-2 ${activeTab === 'overview' ? 'tab-active bg-primary text-primary-content' : ''}`}
+            onClick={() => setActiveTab('overview')}
+          >
+            <Icon name="TrendingUp" size={16} />
+            Overview
           </a>
-          <a className={`tab gap-2 ${activeTab === 'campaigns' ? 'tab-active bg-primary text-primary-content' : ''}`} onClick={() => setActiveTab('campaigns')}>
-            <Icon name="Link" size={16} /> Campaign Performance
+          <a
+            className={`tab gap-2 ${activeTab === 'daily' ? 'tab-active bg-primary text-primary-content' : ''}`}
+            onClick={() => setActiveTab('daily')}
+          >
+            <Icon name="Calendar" size={16} />
+            Daily
+          </a>
+          <a
+            className={`tab gap-2 ${activeTab === 'campaigns' ? 'tab-active bg-primary text-primary-content' : ''}`}
+            onClick={() => setActiveTab('campaigns')}
+          >
+            <Icon name="Link" size={16} />
+            Campaigns
           </a>
         </div>
 
         <div className="animate-fade-in">
-          {activeTab === 'daily' ? (
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Funnel Chart */}
+              <FunnelChart
+                data={funnelData?.funnel || {
+                  clicks: summary.clicks,
+                  signups: Math.round(summary.clicks * 0.3),
+                  conversions: summary.conversions,
+                  revenue: summary.revenue
+                }}
+                dateRange={getDateRangeLabel()}
+              />
+
+              {/* Campaign Performance */}
+              <PerformanceBreakdown
+                type="campaign"
+                data={funnelData?.campaignBreakdown || linksData.map(l => ({
+                  linkId: l.id,
+                  name: l.name,
+                  slug: l.slug,
+                  clicks: l.clicks || 0,
+                  conversions: l.conversions || 0,
+                  revenue: l.revenue || 0,
+                  conversionRate: l.clicks > 0 ? (l.conversions / l.clicks) * 100 : 0
+                }))}
+                loading={loading}
+              />
+
+              {/* Affiliate Performance (Admin Only) */}
+              {currentUser?.role === 'admin' && funnelData?.affiliateBreakdown?.length > 0 && (
+                <div className="lg:col-span-2">
+                  <PerformanceBreakdown
+                    type="affiliate"
+                    data={funnelData.affiliateBreakdown}
+                    loading={loading}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'daily' && (
             <div className="card bg-base-100 shadow-sm border border-base-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="table table-zebra w-full">
@@ -230,16 +345,15 @@ export default function ReportsPage() {
                 </table>
               </div>
             </div>
-          ) : (
-            <div>
-              {/* Note: In a real app, pass onEdit/onDelete handlers to navigate to LinkModal */}
-              <LinkTable
-                links={linksData}
-                currentUserRole={currentUser?.role}
-                onEdit={() => { }}
-                onDelete={() => { }}
-              />
-            </div>
+          )}
+
+          {activeTab === 'campaigns' && (
+            <LinkTable
+              links={linksData}
+              currentUserRole={currentUser?.role}
+              onEdit={() => { }}
+              onDelete={() => { }}
+            />
           )}
         </div>
       </div>

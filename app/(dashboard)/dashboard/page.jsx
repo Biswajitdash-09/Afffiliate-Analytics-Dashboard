@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import Icon from "@/components/Icon";
 import StatCard from "@/components/ui/StatCard";
 import SimpleChart from "@/components/ui/SimpleChart";
+import Leaderboard from "@/components/ui/Leaderboard";
 
 export default function DashboardPage() {
   const { currentUser, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -221,6 +222,13 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Leaderboard - Admin Only */}
+      {currentUser?.role === 'admin' && (
+        <div className="mt-8">
+          <Leaderboard dateRange={dateRange} limit={10} />
+        </div>
+      )}
     </div>
   );
 }

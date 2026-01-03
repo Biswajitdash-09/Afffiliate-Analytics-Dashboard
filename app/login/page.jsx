@@ -83,7 +83,7 @@ export default function AuthPage() {
                     </div>
 
                     <div className="text-center mb-8 mt-4">
-                        <div className="mx-auto bg-gradient-to-br from-primary/20 to-secondary/20 p-4 rounded-xl w-16 h-16 flex items-center justify-center mb-4">
+                        <div className="mx-auto bg-linear-to-br from-primary/20 to-secondary/20 p-4 rounded-xl w-16 h-16 flex items-center justify-center mb-4">
                             <Icon name="Zap" className="w-8 h-8 text-primary" />
                         </div>
                         <h1 className="text-2xl font-bold">{isLogin ? "Welcome Back" : "Create Account"}</h1>
